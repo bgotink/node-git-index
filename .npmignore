@@ -1,7 +1,10 @@
 /coverage
 /tsconfig.json
+/yarn.lock
 /.clang-format
 /src
 /.vscode
 /test
 /.nyc_output
+/.editorconfig
+/.npmignore
