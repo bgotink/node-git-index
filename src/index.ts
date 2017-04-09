@@ -23,14 +23,19 @@ function createTemporaryDirectory(prefix: string): Promise<string> {
   });
 }
 
-function git(cwd, ...args: string[]): Promise<void> {
-  return new Promise<void>((resolve, reject) => {
+function git(cwd, ...args: string[]): Promise<string> {
+  return new Promise<string>((resolve, reject) => {
     const proc = spawn('git', args, {
       cwd,
-      stdio: 'ignore',
+      stdio: ['ignore', 'pipe', 'ignore'],
     });
 
     let ended = false;
+    const output: string[] = [];
+
+    proc.stdout.on('data', buffer => {
+      output.push(buffer.toString());
+    });
 
     proc.on('error', /* istanbul ignore next */ e => {
       if (ended) {
@@ -49,7 +54,7 @@ function git(cwd, ...args: string[]): Promise<void> {
 
       /* istanbul ignore else */
       if (code === 0) {
-        resolve();
+        resolve(output.join(''));
       } else {
         if (signal) {
           reject(new Error(`git killed with process ${signal}`));
@@ -57,6 +62,8 @@ function git(cwd, ...args: string[]): Promise<void> {
           reject(new Error(`git ended with code ${code}`));
         }
       }
+
+      output.length = 0;
     });
   });
 }
@@ -89,24 +96,15 @@ function streamDirectory(srcGlob: string|string[], fakeroot: string): NodeJS.Rea
   return result;
 }
 
-/**
- * Stream the entire index. The resulting stream contains all files including symlinks, but no directories,
- * currently contained in the git repository.
- * Staged changes are included but unstaged changes are ignored.
- *
- * @param directory The directory (can be absolute or relative to the current directory), defaults to the current directory
- * @return A stream of Vinyl files showing the current index content.
- */
-export function streamIndex(directory = process.cwd()): NodeJS.ReadableStream {
-  const srcDirectory = resolve(directory);
-
+function streamIndexFiles(
+    directory: string, files: string[]|Promise<string[]>): NodeJS.ReadableStream {
   const result = objectStream();
 
-  createTemporaryDirectory(basename(srcDirectory))
-      .then(tmpDirectory => {
-        return git(srcDirectory, 'checkout-index', '-a', '--prefix', `${tmpDirectory}/`)
+  Promise.all([createTemporaryDirectory(basename(directory)), files])
+      .then(([tmpDirectory, files]) => {
+        return git(directory, 'checkout-index', '--prefix', `${tmpDirectory}/`, ...files)
             .then(() => {
-              streamDirectory(joinPath(tmpDirectory, '**'), srcDirectory)
+              streamDirectory(joinPath(tmpDirectory, '**'), directory)
                   .pipe(objectStream((file: File, _: any, cb: () => void) => {
                     result.push(file);
                     cb();
@@ -123,4 +121,36 @@ export function streamIndex(directory = process.cwd()): NodeJS.ReadableStream {
       .catch(/* istanbul ignore next */ e => result.emit('error', e));
 
   return result;
+}
+
+/**
+ * Stream the entire index. The resulting stream contains all files including symlinks, but no
+ * directories, currently contained in the git repository. Staged changes are included but unstaged
+ * changes are ignored.
+ *
+ * @param directory The directory (can be absolute or relative to the current directory), defaults
+ * to the current directory
+ * @return A stream of Vinyl files showing the current index content.
+ */
+export function streamIndex(directory: string = process.cwd()): NodeJS.ReadableStream {
+  return streamIndexFiles(resolve(directory), ['-a']);
+}
+
+/**
+ * Stream all changed files in the index. The resulting stream contains all files including
+ * symlinks, but no directories, currently contained in the git repository. Staged changes are
+ * included but unstaged changes are ignored.
+ *
+ * @param directory The directory (can be absolute or relative to the current directory), defaults
+ * to the current directory
+ * @return A stream of Vinyl files showing the current index content for all files with staged
+ * changes.
+ */
+export function streamChangedIndex(directory: string = process.cwd()): NodeJS.ReadableStream {
+  const srcDirectory = resolve(directory);
+
+  return streamIndexFiles(
+      srcDirectory,
+      git(srcDirectory, 'diff', '--cached', '--name-only', '--diff-filter', 'ACM')
+          .then(files => files.split('\n')));
 }
