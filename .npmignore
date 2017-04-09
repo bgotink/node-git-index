@@ -1,0 +1,7 @@
+/coverage
+/tsconfig.json
+/.clang-format
+/src
+/.vscode
+/test
+/.nyc_output

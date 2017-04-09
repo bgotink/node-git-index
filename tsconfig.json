@@ -1,0 +1,23 @@
+{
+  "compilerOptions": {
+    "module": "commonjs",
+    "target": "es2015",
+    "noImplicitAny": false,
+    "sourceMap": false,
+    "typeRoots": [
+      "node_modules/@types"
+    ],
+    "types": [
+      "node",
+      "vinyl-fs"
+    ],
+    "lib": [
+      "es2015"
+    ],
+    "outDir": "lib",
+    "declaration": true
+  },
+  "include": [
+    "src/**/*.ts"
+  ]
+}
