@@ -2,7 +2,13 @@
   "compilerOptions": {
     "module": "commonjs",
     "target": "es2015",
-    "noImplicitAny": false,
+    "noImplicitAny": true,
+    "noImplicitReturns": true,
+    "noImplicitThis": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "alwaysStrict": true,
+    "strictNullChecks": true,
     "sourceMap": false,
     "typeRoots": [
       "node_modules/@types"

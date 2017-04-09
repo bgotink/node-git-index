@@ -23,7 +23,7 @@ function createTemporaryDirectory(prefix: string): Promise<string> {
   });
 }
 
-function git(cwd, ...args: string[]): Promise<string> {
+function git(cwd: string, ...args: string[]): Promise<string> {
   return new Promise<string>((resolve, reject) => {
     const proc = spawn('git', args, {
       cwd,
@@ -113,7 +113,7 @@ function streamIndexFiles(
                       () => {
                         result.end();
                       })
-                  .on('error', /* istanbul ignore next */ e => {
+                  .on('error', /* istanbul ignore next */ (e: any) => {
                     result.emit('error', e);
                   });
             });
