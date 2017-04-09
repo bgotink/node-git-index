@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "description": "Stream the git index files, ignoring any unstaged changes",
   "main": "lib/index.js",
+  "typings": "lib/index.d.ts",
   "repository": "https://github.com/bgotink/node-git-index.git",
   "author": "Bram Gotink <bram@gotink.me>",
   "license": "MIT",
